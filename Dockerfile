@@ -20,4 +20,7 @@ RUN wget -O dd-java-agent.jar https://github.com/DataDog/dd-trace-java/releases/
 RUN apk add curl wget
 RUN mkdir -p /tmp/files && echo "hello" > /tmp/files/hello.txt && echo "world" > /tmp/files/foo.txt
 
+# Lock down permissions
+RUN chmod 444 dd-java-agent.jar
+
 CMD ["java", "-javaagent:/app/dd-java-agent.jar", "-jar", "/app/spring-boot-application.jar"]
