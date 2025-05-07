@@ -14,7 +14,9 @@ import java.util.regex.Pattern;
 public class DomainTestService {
 
   final static int timeoutMs = 10_000;
-  final static Pattern domainValidationRegex = Pattern.compile("^((?!-))(xn--)?[a-z0-9][a-z0-9-_]{0,61}[a-z0-9]{0,1}\\.(xn--)?([a-z0-9\\-]{1,61}|[a-z0-9-]{1,30}\\.[a-z]{2,})", Pattern.CASE_INSENSITIVE);
+  final static Pattern domainValidationRegex = Pattern.compile(
+      "^((?!-))(xn--)?[a-z0-9][a-z0-9-_]{0,61}[a-z0-9]{0,1}\\.(xn--)?([a-z0-9\\-]{1,61}|[a-z0-9-]{1,30}\\.[a-z]{2,})",
+      Pattern.CASE_INSENSITIVE);
 
   public String testDomain(String domainName) throws DomainTestException {
     if (!isValidDomainName(domainName)) {
@@ -22,20 +24,25 @@ public class DomainTestService {
     }
 
     try {
-      //TODO use ProcessBuilder which looks cleaner
-      Process process = Runtime.getRuntime().exec(new String[] {"sh", "-c", "ping -c 1 " + domainName});
+      // Safely run ping using ProcessBuilder without using a shell
+      ProcessBuilder builder = new ProcessBuilder("ping", "-c", "1", domainName);
+      Process process = builder.start();
+
       if (!process.waitFor(timeoutMs, TimeUnit.MILLISECONDS)) {
         throw new UnableToTestDomainException("Timed out pinging domain");
       }
+
       int exitCode = process.exitValue();
       if (exitCode != 0) {
         String stderr = new String(process.getErrorStream().readAllBytes());
         throw new UnableToTestDomainException("Ping returned exit status " + exitCode + ": " + stderr);
       }
+
       return new String(process.getInputStream().readAllBytes());
     } catch (IOException e) {
       throw new UnableToTestDomainException("Internal error while testing domain: " + e.getMessage());
     } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
       throw new UnableToTestDomainException("Timed out pinging domain");
     }
   }
